@@ -87,4 +87,11 @@ Esta extensão foi desenvolvida e idealizada por:
 
 ---
 
+## 📄 Licença
+
+Este projeto está licenciado sob a Licença MIT - consulte o arquivo [LICENSE](LICENSE) para obter mais detalhes.
+
+---
+
 Desenvolvido para ajudar você a conquistar sua próxima vaga internacional ou ler documentações técnicas sem barreiras! 🌐🚀
+
