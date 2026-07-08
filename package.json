@@ -2,13 +2,13 @@
   "name": "devlingo",
   "displayName": "DevLingo",
   "description": "Aprenda inglês de forma imersiva enquanto desenvolve. Traduza, ouça a pronúncia e consulte expressões comuns do dia a dia de TI.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "jeanevertonoficial",
   "icon": "media/logo.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jeaneverton/devlingo.git"
+    "url": "https://github.com/jeanevertonoficial/devlingo.git"
   },
   "engines": {
     "vscode": "^1.74.0"
