@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --border-radius: 8px;
+            --transition-speed: 0.2s;
+            --accent-color: #4fc3f7;
+            --accent-color-hover: #81d4fa;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--vscode-sideBar-background);
+            color: var(--vscode-sideBar-foreground, #cccccc);
+            margin: 0;
+            padding: 12px;
+            box-sizing: border-box;
+            font-size: 13px;
+            overflow-x: hidden;
+        }
+
+        /* Título com Efeito Gradiente */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, rgba(255,255,255,0.1));
+        }
+
+        .header h1 {
+            font-size: 18px;
+            margin: 0;
+            font-weight: 700;
+            background: linear-gradient(135deg, #64b5f6, #4fc3f7, #81c784);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .header .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header .badge {
+            font-size: 9px;
+            background: var(--vscode-badge-background, #007acc);
+            color: var(--vscode-badge-foreground, #ffffff);
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* Navegação por Abas */
+        .tabs {
+            display: flex;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, rgba(255,255,255,0.1));
+            padding-bottom: 4px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-sideBar-foreground, #cccccc);
+            padding: 6px 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            opacity: 0.6;
+            outline: none;
+            border-bottom: 2px solid transparent;
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab-btn:hover {
+            opacity: 0.9;
+            color: var(--vscode-sideBar-foreground, #ffffff);
+        }
+
+        .tab-btn.active {
+            opacity: 1;
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Estilização Geral de Formulários e Inputs */
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent-color);
+        }
+
+        textarea, select, input[type="password"] {
+            width: 100%;
+            background-color: var(--vscode-input-background, #1e1e1e);
+            color: var(--vscode-input-foreground, #cccccc);
+            border: 1px solid var(--vscode-input-border, rgba(255,255,255,0.1));
+            border-radius: var(--border-radius);
+            padding: 8px;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+            font-size: 13px;
+            outline: none;
+            transition: border-color var(--transition-speed);
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        textarea:focus, select:focus, input[type="password"]:focus {
+            border-color: var(--vscode-focusBorder, #007acc);
+        }
+
+        select {
+            padding: 6px 8px;
+            cursor: pointer;
+        }
+
+        .btn-translate {
+            width: 100%;
+            background-color: var(--vscode-button-background, #007acc);
+            color: var(--vscode-button-foreground, #ffffff);
+            border: none;
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color var(--transition-speed), transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-translate:hover {
+            background-color: var(--vscode-button-hoverBackground, #0062a3);
+        }
+
+        .btn-translate:active {
+            transform: scale(0.98);
+        }
+
+        /* Checkboxes das Configurações */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            font-size: 12px;
+            user-select: none;
+            color: var(--vscode-sideBar-foreground, #ccc);
+        }
+
+        .checkbox-label input {
+            cursor: pointer;
+            margin: 0;
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Sliders das Configurações */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: var(--vscode-settings-textInputBackground, rgba(255,255,255,0.1));
+            border-radius: 2px;
+            outline: none;
+            margin: 10px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--accent-color-hover);
+        }
+
+        /* Glassmorphism Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            padding: 12px;
+            margin-bottom: 12px;
+            position: relative;
+            backdrop-filter: blur(10px);
+            transition: transform var(--transition-speed), border-color var(--transition-speed);
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .card-title {
+            font-size: 11px;
+            color: var(--accent-color);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .card-body {
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .action-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--vscode-sideBar-foreground);
+            transition: background var(--transition-speed), color var(--transition-speed);
+        }
+
+        .action-icon:hover {
+            background: rgba(255,255,255,0.1);
+            color: #ffffff;
+        }
+
+        /* Botões de Opção do Quiz */
+        .quiz-option-btn {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--border-radius);
+            padding: 10px 12px;
+            color: var(--vscode-sideBar-foreground, #ccc);
+            text-align: left;
+            font-family: var(--font-family);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+
+        .quiz-option-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+            color: #ffffff;
+            transform: translateX(2px);
+        }
+
+        .quiz-option-btn.correct {
+            background: rgba(76, 175, 80, 0.15) !important;
+            border-color: #4caf50 !important;
+            color: #81c784 !important;
+            font-weight: bold;
+        }
+
+        .quiz-option-btn.incorrect {
+            background: rgba(244, 67, 54, 0.15) !important;
+            border-color: #f44336 !important;
+            color: #e57373 !important;
+        }
+
+        /* Categoria de Expressões Dev */
+        .category-header {
+            background: var(--vscode-sideBarSectionHeader-background, rgba(255,255,255,0.05));
+            padding: 6px 10px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-radius: 4px;
+            margin-top: 14px;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+            color: #e0e0e0;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .phrase-item {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .phrase-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(2px);
+            border-color: var(--accent-color);
+        }
+
+        .phrase-content {
+            flex: 1;
+        }
+
+        .phrase-en {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 13px;
+        }
+
+        .phrase-pt {
+            color: #888888;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        /* Histórico de Estudo */
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            margin-bottom: 8px;
+            transition: all var(--transition-speed);
+        }
+
+        .history-header-block {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item.learned {
+            opacity: 0.5;
+            border-color: rgba(79, 195, 247, 0.2);
+        }
+
+        .history-text {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .history-text .en {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .history-text .pt {
+            color: #888888;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .history-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Checkbox Customizado */
+        .checkbox-container {
+            display: block;
+            position: relative;
+            cursor: pointer;
+            font-size: 16px;
+            user-select: none;
+            padding: 4px;
+        }
+
+        .checkbox-container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+
+        .checkmark {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-color: transparent;
+            border: 2px solid var(--vscode-sideBar-foreground, #888);
+            border-radius: 4px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .checkbox-container:hover input ~ .checkmark {
+            border-color: var(--accent-color);
+        }
+
+        .checkbox-container input:checked ~ .checkmark {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+            left: 5px;
+            top: 2px;
+            width: 4px;
+            height: 8px;
+            border: solid black;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .checkbox-container input:checked ~ .checkmark:after {
+            display: block;
+        }
+
+        /* Avisos e Empty States */
+        .empty-state {
+            text-align: center;
+            padding: 24px 12px;
+            color: #666666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>DevLingo</h1>
+        <div class="header-controls">
+            <button class="action-icon" onclick="toggleSettings()" title="Configurações do DevLingo">⚙️</button>
+            <span class="badge">Immersive</span>
+        </div>
+    </div>
+
+    <!-- Painel de Configurações de Voz e Recursos (Collapsible) -->
+    <div id="settings-panel" style="display: none;" class="card">
+        <div class="card-title">Configurações</div>
+        
+        <!-- Chave API do Gemini -->
+        <div class="input-group">
+            <label for="gemini-key">Chave API do Gemini (Opcional)</label>
+            <input type="password" id="gemini-key" placeholder="Cole sua chave API do Gemini..." onchange="saveSettings()">
+            <div style="font-size: 10px; margin-top: 4px; color: var(--vscode-sideBar-foreground); opacity: 0.8; line-height: 1.3;">
+                💡 Libera Connected Speech e Dicas do Coach! <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-color); text-decoration: none; font-weight: bold;">Obter chave gratuita ➔</a>
+            </div>
+        </div>
+
+        <!-- Motor de Voz -->
+        <div class="input-group">
+            <label for="voice-engine">Motor de Voz</label>
+            <select id="voice-engine" onchange="toggleEngineSettings(); saveSettings()">
+                <option value="online">Voz Humana Online (Google TTS)</option>
+                <option value="local">Voz Local Offline (Sistema)</option>
+            </select>
+        </div>
+
+        <!-- Velocidade da Fala -->
+        <div class="input-group" style="margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label for="speech-rate">Velocidade da Fala</label>
+                <span id="rate-value" style="font-weight: bold; color: var(--accent-color);">0.9x</span>
+            </div>
+            <input type="range" id="speech-rate" min="0.5" max="2.0" step="0.1" value="0.9" style="cursor: pointer;" oninput="updateRateLabel()" onchange="saveSettings()">
+        </div>
+        
+        <!-- Configuração de Voz Local (mostrada apenas se motor for local) -->
+        <div id="local-voice-settings" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
+            <div class="input-group">
+                <label for="voice-en">Voz para Inglês (EN)</label>
+                <select id="voice-en" onchange="saveSettings()"></select>
+                <div id="voice-warning" style="display:none; font-size:10.5px; color:#e57373; margin-top:6px; line-height:1.4;">
+                    ⚠️ Nenhuma voz em Inglês instalada no seu sistema. <br>
+                    <strong>Dica:</strong> Vá em <em>Fala > Adicionar Vozes</em> nas configurações do Windows e baixe o pacote de Inglês (US) para ouvir com pronúncia perfeita!
+                </div>
+            </div>
+            <div class="input-group" style="margin-top: 8px;">
+                <label for="voice-pt">Voz para Português (PT)</label>
+                <select id="voice-pt" onchange="saveSettings()"></select>
+            </div>
+        </div>
+
+        <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 12px 0;"></div>
+
+        <!-- Ativação de Recursos -->
+        <div class="input-group">
+            <label style="margin-bottom: 6px;">Recursos Visuais</label>
+            
+            <label class="checkbox-label">
+                <input type="checkbox" id="chk-hover" onchange="saveSettings()">
+                <span>Balão ao passar o mouse (Hover)</span>
+            </label>
+            
+            <label class="checkbox-label" style="margin-top: 6px;">
+                <input type="checkbox" id="chk-inline" onchange="saveSettings()">
+                <span>Balão inline na linha ativa</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Navegação de Abas -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('translator')">Tradutor</button>
+        <button class="tab-btn" onclick="switchTab('phrases')">Expressões</button>
+        <button class="tab-btn" onclick="switchTab('history')">Vocabulário</button>
+        <button class="tab-btn" onclick="switchTab('challenges')">Desafios 🏆</button>
+    </div>
+
+    <!-- Conteúdo da Aba 1: Tradutor -->
+    <div id="translator-tab" class="tab-content active">
+        <div class="input-group">
+            <label for="source-text">Texto (PT ou EN)</label>
+            <textarea id="source-text" placeholder="Digite uma frase ou cole um trecho de código aqui..." onkeydown="handleTextareaKeydown(event)"></textarea>
+        </div>
+        <button class="btn-translate" onclick="performTranslation()">
+            <span>Traduzir</span> <span>➔</span>
+        </button>
+
+        <div id="result-container" style="display: none; margin-top: 16px;">
+            <div class="card">
+                <div class="card-title" id="result-lang-label">Tradução</div>
+                <div class="card-body" id="translated-text" style="font-weight: 600; margin-bottom: 10px;"></div>
+                
+                <!-- Connected Speech (Gemini Only) -->
+                <div id="result-connected-speech-container" style="margin-top: 10px; display: none; margin-bottom: 10px;">
+                    <div class="card-title" style="color: #81d4fa;">Connected Speech 🗣️</div>
+                    <div class="card-body" id="result-connected-speech" style="font-style: italic; color: #b3e5fc;"></div>
+                </div>
+
+                <!-- Explanation Bilíngue (Gemini Only) -->
+                <div id="result-explanation-container" style="margin-top: 10px; display: none; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 8px;">
+                    <div class="card-title" style="color: #81c784;">Dica do Coach 💡</div>
+                    
+                    <div style="margin-bottom: 6px;">
+                        <div style="font-size: 12px; color: #e0e0e0; line-height: 1.4; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                            <span id="result-explanation-en"></span>
+                            <button class="action-icon" style="padding: 2px; font-size: 11px;" title="Ouvir Dica em Inglês" onclick="speakExplanationEn()">🔊</button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div style="font-size: 11.5px; color: #aaaaaa; line-height: 1.4; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.04); padding-top: 6px;">
+                            <span id="result-explanation-pt"></span>
+                            <button class="action-icon" style="padding: 2px; font-size: 11px;" title="Ouvir Dica em Português" onclick="speakExplanationPt()">🔊</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-actions" style="margin-top: 12px;">
+                    <button class="action-icon" title="Ouvir Tradução" onclick="speakTranslationResult()">🔊</button>
+                    <button class="action-icon" title="Copiar Texto" onclick="copyTranslationResult()">📋</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo da Aba 2: Expressões Dev -->
+    <div id="phrases-tab" class="tab-content">
+        <div class="category-header">Daily Standups</div>
+        <div class="phrase-item" onclick="speakExpression('I am working on the user authentication feature today.', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">I am working on the user authentication feature today.</div>
+                <div class="phrase-pt">Estou trabalhando na funcionalidade de autenticação de usuário hoje.</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+        <div class="phrase-item" onclick="speakExpression('I finished the database migration yesterday.', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">I finished the database migration yesterday.</div>
+                <div class="phrase-pt">Terminei a migração do banco de dados ontem.</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+        <div class="phrase-item" onclick="speakExpression('I am currently blocked by a server configuration issue.', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">I am currently blocked by a server configuration issue.</div>
+                <div class="phrase-pt">Estou travado por um problema de configuração do servidor.</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+
+        <div class="category-header">Pull Requests & Code Review</div>
+        <div class="phrase-item" onclick="speakExpression('Could you please take a look at my pull request?', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">Could you please take a look at my pull request?</div>
+                <div class="phrase-pt">Você poderia dar uma olhada no meu pull request?</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+        <div class="phrase-item" onclick="speakExpression('I suggest refactoring this function to reduce complexity.', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">I suggest refactoring this function to reduce complexity.</div>
+                <div class="phrase-pt">Sugeriria refatorar esta função para reduzir a complexidade.</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+        <div class="phrase-item" onclick="speakExpression('Thanks for the feedback. I will apply these changes.', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">Thanks for the feedback. I will apply these changes.</div>
+                <div class="phrase-pt">Obrigado pelo feedback. Vou aplicar essas alterações.</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+
+        <div class="category-header">Discutindo Bugs</div>
+        <div class="phrase-item" onclick="speakExpression('I found a bug in the payment gateway integration.', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">I found a bug in the payment gateway integration.</div>
+                <div class="phrase-pt">Encontrei um bug na integração do gateway de pagamento.</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+        <div class="phrase-item" onclick="speakExpression('I was able to reproduce the error on my local environment.', 'en')">
+            <div class="phrase-content">
+                <div class="phrase-en">I was able to reproduce the error on my local environment.</div>
+                <div class="phrase-pt">Consegui reproduzir o erro no meu ambiente local.</div>
+            </div>
+            <div class="action-icon">🔊</div>
+        </div>
+    </div>
+
+    <!-- Conteúdo da Aba 3: Vocabulário (Histórico) -->
+    <div id="history-tab" class="tab-content">
+        <div class="history-list" id="history-list-container">
+            <div class="empty-state">Seu histórico de tradução aparecerá aqui...</div>
+        </div>
+    </div>
+
+    <!-- Conteúdo da Aba 4: Desafios -->
+    <div id="challenges-tab" class="tab-content">
+        <!-- Dashboard de Progresso -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div class="card-title" style="color: #ffb74d;">Evolução Diária 🏆</div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase;">🔥 Streak</div>
+                    <div id="stat-streak" style="font-size: 18px; font-weight: bold; color: #ffb74d; margin-top: 4px;">0 dias</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase;">🧠 Vocabulário</div>
+                    <div id="stat-vocab" style="font-size: 18px; font-weight: bold; color: #81d4fa; margin-top: 4px;">0 termos</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase;">✅ Aprendidos</div>
+                    <div id="stat-learned" style="font-size: 18px; font-weight: bold; color: #81c784; margin-top: 4px;">0</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase;">🎯 Taxa de Acerto</div>
+                    <div id="stat-accuracy" style="font-size: 18px; font-weight: bold; color: #e57373; margin-top: 4px;">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Area -->
+        <div id="quiz-dashboard">
+            <div class="card" style="text-align: center; padding: 20px;">
+                <div style="font-size: 32px; margin-bottom: 12px;">🎯</div>
+                <h3 style="margin: 0 0 8px 0; color: #ffffff;">Desafio Diário DevLingo</h3>
+                <p style="font-size: 12px; color: #aaaaaa; line-height: 1.4; margin: 0 0 16px 0;">
+                    Pratique e fixe os termos que você andou traduzindo e lendo no seu dia de trabalho!
+                </p>
+                <button class="btn-translate" onclick="startQuiz()" style="background-color: #ffb74d; color: #332200;">
+                    <span>Começar Desafio 🚀</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="quiz-game-container" style="display: none;">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                    <div id="quiz-question-number" style="font-size: 11px; color: var(--accent-color); font-weight: bold; text-transform: uppercase;">Pergunta 1 de 3</div>
+                </div>
+                <div id="quiz-question-text" style="font-size: 14px; font-weight: bold; color: #ffffff; line-height: 1.4; margin-bottom: 16px;">
+                    Como se diz em inglês: "..."?
+                </div>
+                
+                <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Botões de Opção injetados -->
+                </div>
+
+                <div id="quiz-feedback-container" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: none; text-align: center;">
+                    <div id="quiz-feedback-text" style="font-weight: bold; font-size: 13px; margin-bottom: 10px; line-height: 1.4;"></div>
+                    <button class="btn-translate" id="btn-next-question" onclick="nextQuizQuestion()">
+                        <span>Próxima Pergunta ➔</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        let lastResult = null;
+        let translationHistory = [];
+        let selectedEnVoiceName = '';
+        let selectedPtVoiceName = '';
+        let activeAudio = null;
+        
+        let isInitialized = false;
+        
+        let settings = {
+            hoverEnabled: true,
+            inlineEnabled: false,
+            voiceEngine: 'online',
+            speechRate: '0.9',
+            geminiApiKey: '',
+            selectedEnVoiceName: '',
+            selectedPtVoiceName: ''
+        };
+
+        // Quiz State
+        let quizQuestions = [];
+        let currentQuestionIndex = 0;
+        let correctQuizCount = 0;
+        let hasAnswered = false;
+
+        let stats = {
+            streak: 0,
+            lastQuizDate: '',
+            totalQuizzes: 0,
+            correctAnswers: 0,
+            totalQuestions: 0
+        };
+
+        const fallbackExpressions = [
+            { pt: "Estou trabalhando na funcionalidade de autenticação de usuário hoje.", en: "I am working on the user authentication feature today." },
+            { pt: "Terminei a migração do banco de dados ontem.", en: "I finished the database migration yesterday." },
+            { pt: "Estou travado por um problema de configuração do servidor.", en: "I am currently blocked by a server configuration issue." },
+            { pt: "Você poderia dar uma olhada no meu pull request?", en: "Could you please take a look at my pull request?" },
+            { pt: "Sugeriria refatorar esta função para reduzir a complexidade.", en: "I suggest refactoring this function to reduce complexity." },
+            { pt: "Obrigado pelo feedback. Vou aplicar essas alterações.", en: "Thanks for the feedback. I will apply these changes." },
+            { pt: "Encontrei um bug na integração do gateway de pagamento.", en: "I found a bug in the payment gateway integration." },
+            { pt: "Consegui reproduzir o erro no meu ambiente local.", en: "I was able to reproduce the error on my local environment." }
+        ];
+
+        // Recupera o histórico anterior
+        try {
+            const state = vscode.getState();
+            if (state) {
+                if (state.history) {
+                    translationHistory = state.history;
+                    renderHistory();
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao ler estado do vscode:', e);
+        }
+
+        // Avisa que a Webview está carregada e pronta
+        window.onload = () => {
+            vscode.postMessage({ type: 'ready' });
+            populateVoiceList();
+        };
+
+        // Alterna entre abas
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick').includes(tabId));
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            const activeContent = document.getElementById(`${tabId}-tab`);
+            if (activeContent) activeContent.classList.add('active');
+            
+            if (tabId === 'challenges') {
+                renderStats();
+            }
+        }
+
+        // Atalho de teclado para enviar tradução com Enter
+        function handleTextareaKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                performTranslation();
+            }
+        }
+
+        // Dispara a tradução para o back-end da extensão
+        function performTranslation() {
+            const text = document.getElementById('source-text').value;
+            if (!text.trim()) return;
+
+            vscode.postMessage({
+                type: 'translate',
+                text: text
+            });
+        }
+
+        // Recebe respostas vindas da extensão
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.type) {
+                case 'translationResult':
+                    displayResult(message);
+                    addToHistory(message);
+                    break;
+                case 'speak':
+                    speakText(message.text, message.lang);
+                    break;
+                case 'populateAndTranslate':
+                    document.getElementById('source-text').value = message.text;
+                    performTranslation();
+                    switchTab('translator');
+                    break;
+                case 'initSettings':
+                    // Recebe configurações salvas do globalState da extensão
+                    settings = message.settings;
+                    document.getElementById('chk-hover').checked = settings.hoverEnabled;
+                    document.getElementById('chk-inline').checked = settings.inlineEnabled;
+                    document.getElementById('voice-engine').value = settings.voiceEngine || 'online';
+                    document.getElementById('speech-rate').value = settings.speechRate || '0.9';
+                    document.getElementById('gemini-key').value = settings.geminiApiKey || '';
+                    
+                    // Restaura as vozes selecionadas a partir do settings
+                    selectedEnVoiceName = settings.selectedEnVoiceName || '';
+                    selectedPtVoiceName = settings.selectedPtVoiceName || '';
+                    
+                    if (message.stats) {
+                        stats = message.stats;
+                    }
+                    
+                    updateRateLabel();
+                    toggleEngineSettings();
+                    renderStats();
+                    isInitialized = true;
+                    break;
+            }
+        });
+
+        // Mostra o resultado da tradução na UI
+        function displayResult(res) {
+            const container = document.getElementById('result-container');
+            const label = document.getElementById('result-lang-label');
+            const output = document.getElementById('translated-text');
+            const connectedSpeechContainer = document.getElementById('result-connected-speech-container');
+            const connectedSpeechOutput = document.getElementById('result-connected-speech');
+            const explanationContainer = document.getElementById('result-explanation-container');
+            const explanationEnOutput = document.getElementById('result-explanation-en');
+            const explanationPtOutput = document.getElementById('result-explanation-pt');
+
+            const fromLang = res.from === 'pt' ? 'Português' : 'Inglês';
+            const toLang = res.to === 'pt' ? 'Português' : 'Inglês';
+            label.innerText = `Tradução (${fromLang} ➔ ${toLang})`;
+            output.innerText = res.translated;
+
+            // Renderiza o connected speech se disponível
+            if (res.connectedSpeech) {
+                connectedSpeechOutput.innerText = res.connectedSpeech;
+                connectedSpeechContainer.style.display = 'block';
+            } else {
+                connectedSpeechContainer.style.display = 'none';
+            }
+
+            // Renderiza as dicas de coaching bilíngues se disponíveis
+            if (res.explanationEn || res.explanationPt) {
+                explanationEnOutput.innerText = res.explanationEn || '';
+                explanationPtOutput.innerText = res.explanationPt || '';
+                explanationContainer.style.display = 'block';
+            } else {
+                explanationContainer.style.display = 'none';
+            }
+
+            container.style.display = 'block';
+            lastResult = res;
+        }
+
+        // Copia a tradução ativa para a área de transferência
+        function copyTranslationResult() {
+            if (!lastResult) return;
+            navigator.clipboard.writeText(lastResult.translated);
+        }
+
+        // Fala a tradução ativa
+        function speakTranslationResult() {
+            if (!lastResult) return;
+            speakText(lastResult.translated, lastResult.to);
+        }
+
+        // Fala a explicação do coach em inglês
+        function speakExplanationEn() {
+            if (!lastResult || !lastResult.explanationEn) return;
+            speakText(lastResult.explanationEn, 'en');
+        }
+
+        // Fala a explicação do coach em português
+        function speakExplanationPt() {
+            if (!lastResult || !lastResult.explanationPt) return;
+            speakText(lastResult.explanationPt, 'pt');
+        }
+
+        // Fala expressões estáticas do guia
+        function speakExpression(text, lang) {
+            speakText(text, lang);
+        }
+
+        // Motor Geral de Text-to-Speech (TTS)
+        function speakText(text, langCode) {
+            const speed = parseFloat(settings.speechRate || '0.9');
+
+            // Caso 1: Voz Humana Online (Google TTS)
+            if (settings.voiceEngine === 'online') {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+                
+                if (activeAudio) {
+                    activeAudio.pause();
+                }
+
+                const lang = langCode === 'pt' ? 'pt' : 'en';
+                const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.substring(0, 200))}`;
+                
+                activeAudio = new Audio(url);
+                activeAudio.playbackRate = speed;
+                activeAudio.play().catch(err => {
+                    console.error("Erro no player online, executando fallback local:", err);
+                    speakLocalText(text, langCode, speed);
+                });
+            } else {
+                // Caso 2: Voz Local Offline (Web Speech API)
+                speakLocalText(text, langCode, speed);
+            }
+        }
+
+        // Executa a leitura offline usando as vozes locais do SO
+        function speakLocalText(text, langCode, speed) {
+            if (!('speechSynthesis' in window)) {
+                vscode.postMessage({ type: 'showError', message: 'Navegador não suporta síntese de voz.' });
+                return;
+            }
+
+            const play = () => {
+                if (activeAudio) {
+                    activeAudio.pause();
+                }
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = langCode === 'pt' ? 'pt-BR' : 'en-US';
+                utterance.rate = speed;
+
+                const voices = window.speechSynthesis.getVoices();
+                let selectedVoice = null;
+
+                if (langCode === 'pt') {
+                    selectedVoice = voices.find(v => v.name === selectedPtVoiceName) || 
+                                    voices.find(v => v.lang.startsWith('pt'));
+                } else {
+                    selectedVoice = voices.find(v => v.name === selectedEnVoiceName) || 
+                                    voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) || 
+                                    voices.find(v => v.lang === 'en-US') || 
+                                    voices.find(v => v.lang.startsWith('en'));
+                }
+
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices || voices.length === 0) {
+                const interval = setInterval(() => {
+                    const readyVoices = window.speechSynthesis.getVoices();
+                    if (readyVoices && readyVoices.length > 0) {
+                        clearInterval(interval);
+                        play();
+                    }
+                }, 100);
+                setTimeout(() => clearInterval(interval), 3000); // timeout de segurança
+            } else {
+                play();
+            }
+        }
+
+        // Exibe/Oculta painel de configurações
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'block') {
+                populateVoiceList();
+                toggleEngineSettings();
+            }
+        }
+
+        // Habilita/Desabilita os seletores de voz local conforme a escolha do motor
+        function toggleEngineSettings() {
+            const engine = document.getElementById('voice-engine').value;
+            const localSettingsDiv = document.getElementById('local-voice-settings');
+            
+            if (engine === 'local') {
+                localSettingsDiv.style.display = 'block';
+                populateVoiceList();
+            } else {
+                localSettingsDiv.style.display = 'none';
+            }
+        }
+
+        // Atualiza a visualização do label de velocidade (slider)
+        function updateRateLabel() {
+            const val = document.getElementById('speech-rate').value;
+            document.getElementById('rate-value').innerText = `${parseFloat(val).toFixed(1)}x`;
+        }
+
+        // Popula as listas de seleção com as vozes reais do SO
+        function populateVoiceList() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            
+            const enSelect = document.getElementById('voice-en');
+            const ptSelect = document.getElementById('voice-pt');
+            
+            const currentEnVal = enSelect.value || selectedEnVoiceName;
+            const currentPtVal = ptSelect.value || selectedPtVoiceName;
+            
+            enSelect.innerHTML = '';
+            ptSelect.innerHTML = '';
+            
+            let hasEn = false;
+            let hasPt = false;
+
+            voices.forEach(voice => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.value = voice.name;
+                
+                const langLower = voice.lang.toLowerCase();
+                if (langLower.startsWith('en') || langLower.replace('_', '-').startsWith('en')) {
+                    enSelect.appendChild(option.cloneNode(true));
+                    hasEn = true;
+                } else if (langLower.startsWith('pt') || langLower.replace('_', '-').startsWith('pt')) {
+                    ptSelect.appendChild(option.cloneNode(true));
+                    hasPt = true;
+                }
+            });
+
+            if (!hasEn) {
+                const option = document.createElement('option');
+                option.textContent = 'Voz Padrão do Sistema (Inglês)';
+                option.value = '';
+                enSelect.appendChild(option);
+                document.getElementById('voice-warning').style.display = 'block';
+            } else {
+                document.getElementById('voice-warning').style.display = 'none';
+            }
+
+            if (!hasPt) {
+                const option = document.createElement('option');
+                option.textContent = 'Voz Padrão do Sistema (Português)';
+                option.value = '';
+                ptSelect.appendChild(option);
+            }
+            
+            if (currentEnVal && Array.from(enSelect.options).some(o => o.value === currentEnVal)) {
+                enSelect.value = currentEnVal;
+            }
+            if (currentPtVal && Array.from(ptSelect.options).some(o => o.value === currentPtVal)) {
+                ptSelect.value = currentPtVal;
+            }
+
+            // Mantém os valores locais de fala sincronizados com o seletor visível do HTML
+            const oldEn = selectedEnVoiceName;
+            const oldPt = selectedPtVoiceName;
+            selectedEnVoiceName = enSelect.value;
+            selectedPtVoiceName = ptSelect.value;
+
+            // Se mudou de vazio para um valor na primeira carga, persiste nas configurações globais
+            if (selectedEnVoiceName !== oldEn || selectedPtVoiceName !== oldPt) {
+                settings.selectedEnVoiceName = selectedEnVoiceName;
+                settings.selectedPtVoiceName = selectedPtVoiceName;
+                saveSettings();
+            }
+        }
+
+        // Salva as configurações completas
+        function saveSettings() {
+            if (!isInitialized) return;
+            
+            selectedEnVoiceName = document.getElementById('voice-en').value;
+            selectedPtVoiceName = document.getElementById('voice-pt').value;
+            
+            settings.hoverEnabled = document.getElementById('chk-hover').checked;
+            settings.inlineEnabled = document.getElementById('chk-inline').checked;
+            settings.voiceEngine = document.getElementById('voice-engine').value;
+            settings.speechRate = document.getElementById('speech-rate').value;
+            settings.geminiApiKey = document.getElementById('gemini-key').value;
+            settings.selectedEnVoiceName = selectedEnVoiceName;
+            settings.selectedPtVoiceName = selectedPtVoiceName;
+
+            const state = vscode.getState() || {};
+            state.history = translationHistory;
+            vscode.setState(state);
+
+            // Envia para o background da extensão (que salva no globalState persistente do editor)
+            vscode.postMessage({
+                type: 'updateSettings',
+                settings: settings,
+                stats: stats
+            });
+        }
+
+        // Histórico & Aprendizado
+        function addToHistory(res) {
+            if (translationHistory.length > 0 && translationHistory[0].original.trim() === res.original.trim()) {
+                return;
+            }
+
+            const item = {
+                id: Date.now(),
+                original: res.original,
+                translated: res.translated,
+                from: res.from,
+                to: res.to,
+                connectedSpeech: res.connectedSpeech || '',
+                explanationEn: res.explanationEn || '',
+                explanationPt: res.explanationPt || '',
+                learned: false
+            };
+
+            translationHistory.unshift(item);
+            
+            if (translationHistory.length > 50) {
+                translationHistory.pop();
+            }
+
+            const state = vscode.getState() || {};
+            state.history = translationHistory;
+            vscode.setState(state);
+            renderHistory();
+        }
+
+        function toggleHistoryExpand(id) {
+            const detailEl = document.getElementById(`history-detail-${id}`);
+            if (detailEl) {
+                detailEl.style.display = detailEl.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function toggleLearned(id, checked) {
+            const item = translationHistory.find(h => h.id === id);
+            if (item) {
+                item.learned = checked;
+                const state = vscode.getState() || {};
+                state.history = translationHistory;
+                vscode.setState(state);
+                renderHistory();
+                renderStats();
+            }
+        }
+
+        function speakHistoryItem(id, type) {
+            const item = translationHistory.find(h => h.id === id);
+            if (item) {
+                if (type === 'original') {
+                    speakText(item.original, item.from);
+                } else {
+                    speakText(item.translated, item.to);
+                }
+            }
+        }
+
+        // Executa a leitura da explicação no histórico
+        function speakHistoryExplanation(id, lang) {
+            const item = translationHistory.find(h => h.id === id);
+            if (item) {
+                if (lang === 'en') {
+                    speakText(item.explanationEn, 'en');
+                } else {
+                    speakText(item.explanationPt, 'pt');
+                }
+            }
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list-container');
+            
+            if (translationHistory.length === 0) {
+                container.innerHTML = '<div class="empty-state">Seu histórico de tradução aparecerá aqui...</div>';
+                return;
+            }
+
+            let html = '';
+            translationHistory.forEach(item => {
+                const enText = item.from === 'pt' ? item.translated : item.original;
+                const ptText = item.from === 'pt' ? item.original : item.translated;
+
+                const hasExplanation = item.explanationEn || item.explanationPt;
+                const detailHtml = (item.connectedSpeech || hasExplanation) ? `
+                    <div id="history-detail-${item.id}" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 11.5px; line-height: 1.4;">
+                        ${item.connectedSpeech ? `<div style="font-style: italic; color: #b3e5fc; margin-bottom: 6px;">🗣️ Connected Speech: ${item.connectedSpeech}</div>` : ''}
+                        
+                        ${item.explanationEn ? `
+                            <div style="color: #e0e0e0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px;">
+                                <span>💡 EN: ${item.explanationEn}</span>
+                                <button class="action-icon" style="padding: 2px; font-size: 10px;" title="Ouvir dica em Inglês" onclick="event.stopPropagation(); speakHistoryExplanation(${item.id}, 'en')">🔊</button>
+                            </div>
+                        ` : ''}
+                        
+                        ${item.explanationPt ? `
+                            <div style="color: #aaaaaa; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.04); padding-top: 4px;">
+                                <span>💡 PT: ${item.explanationPt}</span>
+                                <button class="action-icon" style="padding: 2px; font-size: 10px;" title="Ouvir dica em Português" onclick="event.stopPropagation(); speakHistoryExplanation(${item.id}, 'pt')">🔊</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : '';
+
+                html += `
+                    <div class="history-item ${item.learned ? 'learned' : ''}">
+                        <div class="history-header-block">
+                            <div class="history-text" onclick="toggleHistoryExpand(${item.id})" title="Clique para ver explicações detalhadas">
+                                <div class="en">${enText}</div>
+                                <div class="pt">${ptText}</div>
+                            </div>
+                            <div class="history-controls">
+                                <button class="action-icon" title="Ouvir em Inglês" onclick="speakHistoryItem(${item.id}, '${item.from === 'pt' ? 'translated' : 'original'}')">🔊</button>
+                                <label class="checkbox-container" title="Marcar como aprendido">
+                                    <input type="checkbox" ${item.learned ? 'checked' : ''} onchange="toggleLearned(${item.id}, this.checked)">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                        </div>
+                        ${detailHtml}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Quiz Logic
+        function generateQuiz() {
+            const historyPool = translationHistory.map(h => ({
+                pt: h.from === 'pt' ? h.original : h.translated,
+                en: h.from === 'pt' ? h.translated : h.original
+            }));
+
+            const allItems = [];
+            const seenPt = new Set();
+
+            historyPool.forEach(item => {
+                const cleanPt = item.pt.trim().toLowerCase();
+                if (!seenPt.has(cleanPt) && item.en.trim() !== '') {
+                    seenPt.add(cleanPt);
+                    allItems.push(item);
+                }
+            });
+
+            fallbackExpressions.forEach(item => {
+                const cleanPt = item.pt.trim().toLowerCase();
+                if (!seenPt.has(cleanPt)) {
+                    seenPt.add(cleanPt);
+                    allItems.push(item);
+                }
+            });
+
+            let userHistoryItems = allItems.filter(item => {
+                return translationHistory.some(h => {
+                    const pt = h.from === 'pt' ? h.original : h.translated;
+                    return pt.trim().toLowerCase() === item.pt.trim().toLowerCase();
+                });
+            });
+
+            userHistoryItems.sort(() => Math.random() - 0.5);
+            const shuffledPool = [...allItems].sort(() => Math.random() - 0.5);
+
+            const targets = [];
+            userHistoryItems.forEach(item => {
+                if (targets.length < 3) targets.push(item);
+            });
+
+            if (targets.length < 3) {
+                shuffledPool.forEach(item => {
+                    if (targets.length < 3 && !targets.some(t => t.pt === item.pt)) {
+                        targets.push(item);
+                    }
+                });
+            }
+
+            quizQuestions = targets.map(target => {
+                const distractors = [];
+                for (let item of shuffledPool) {
+                    if (distractors.length < 3 && 
+                        item.en.trim().toLowerCase() !== target.en.trim().toLowerCase() && 
+                        !distractors.some(d => d.toLowerCase() === item.en.trim().toLowerCase())) {
+                        distractors.push(item.en.trim());
+                    }
+                }
+
+                const options = [target.en, ...distractors].sort(() => Math.random() - 0.5);
+
+                return {
+                    pt: target.pt,
+                    correct: target.en,
+                    options: options
+                };
+            });
+
+            currentQuestionIndex = 0;
+            correctQuizCount = 0;
+        }
+
+        function startQuiz() {
+            generateQuiz();
+            if (quizQuestions.length === 0) {
+                vscode.postMessage({ type: 'showError', message: 'Sem termos suficientes para gerar o quiz.' });
+                return;
+            }
+            document.getElementById('quiz-dashboard').style.display = 'none';
+            document.getElementById('quiz-game-container').style.display = 'block';
+            showQuizQuestion();
+        }
+
+        function showQuizQuestion() {
+            const question = quizQuestions[currentQuestionIndex];
+            hasAnswered = false;
+
+            document.getElementById('quiz-question-number').innerText = `Pergunta ${currentQuestionIndex + 1} de ${quizQuestions.length}`;
+            document.getElementById('quiz-question-text').innerText = `Como você traduz: "${question.pt}"?`;
+
+            const optionsContainer = document.getElementById('quiz-options-container');
+            optionsContainer.innerHTML = '';
+
+            question.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => selectQuizOption(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('quiz-feedback-container').style.display = 'none';
+        }
+
+        function selectQuizOption(idx, btn) {
+            if (hasAnswered) return;
+            hasAnswered = true;
+
+            const question = quizQuestions[currentQuestionIndex];
+            const isCorrect = (btn.innerText.trim().toLowerCase() === question.correct.trim().toLowerCase());
+
+            const buttons = document.querySelectorAll('.quiz-option-btn');
+            buttons.forEach(b => {
+                b.disabled = true;
+                if (b.innerText.trim().toLowerCase() === question.correct.trim().toLowerCase()) {
+                    b.classList.add('correct');
+                }
+            });
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                correctQuizCount++;
+                document.getElementById('quiz-feedback-text').innerHTML = `<span style="color: #81c784; font-weight: bold;">✓ Correto!</span> Excelente pronúncia.`;
+                speakText(question.correct, 'en');
+                
+                // Marca como aprendido no histórico
+                markTermAsLearned(question.pt);
+            } else {
+                btn.classList.add('incorrect');
+                document.getElementById('quiz-feedback-text').innerHTML = `<span style="color: #e57373; font-weight: bold;">✗ Incorreto!</span> O correto é: <br><strong style="color: #81c784;">"${question.correct}"</strong>`;
+                speakText(question.correct, 'en');
+            }
+
+            document.getElementById('quiz-feedback-container').style.display = 'block';
+        }
+
+        function markTermAsLearned(ptText) {
+            const cleanPt = ptText.trim().toLowerCase();
+            const item = translationHistory.find(h => {
+                const pt = h.from === 'pt' ? h.original : h.translated;
+                return pt.trim().toLowerCase() === cleanPt;
+            });
+            if (item) {
+                item.learned = true;
+            }
+        }
+
+        function nextQuizQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizQuestions.length) {
+                showQuizQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            document.getElementById('quiz-game-container').style.display = 'none';
+            document.getElementById('quiz-dashboard').style.display = 'block';
+
+            const today = new Date().toLocaleDateString('en-US');
+            
+            // Streak Calculator
+            if (stats.lastQuizDate) {
+                try {
+                    const lastDate = new Date(stats.lastQuizDate);
+                    const currentDate = new Date(today);
+                    const diffTime = Math.abs(currentDate - lastDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays === 1) {
+                        stats.streak += 1;
+                    } else if (diffDays > 1) {
+                        stats.streak = 1;
+                    }
+                } catch(e) {
+                    stats.streak = 1;
+                }
+            } else {
+                stats.streak = 1;
+            }
+
+            stats.lastQuizDate = today;
+            stats.totalQuizzes += 1;
+            stats.correctAnswers += correctQuizCount;
+            stats.totalQuestions += quizQuestions.length;
+
+            saveStats();
+            renderStats();
+            renderHistory();
+
+            // Sincroniza com a extensão
+            vscode.postMessage({
+                type: 'updateSettings',
+                settings: settings,
+                stats: stats
+            });
+
+            vscode.postMessage({
+                type: 'showInfo',
+                message: `Desafio Diário Concluído! Você acertou ${correctQuizCount} de ${quizQuestions.length} perguntas. Streak: ${stats.streak} dias! 🎉`
+            });
+        }
+
+        function saveStats() {
+            const state = vscode.getState() || {};
+            state.stats = stats;
+            state.history = translationHistory;
+            vscode.setState(state);
+        }
+
+        function renderStats() {
+            document.getElementById('stat-streak').innerText = `${stats.streak || 0} dias`;
+            document.getElementById('stat-vocab').innerText = `${translationHistory.length} termos`;
+            
+            const learnedCount = translationHistory.filter(h => h.learned).length;
+            document.getElementById('stat-learned').innerText = `${learnedCount}`;
+
+            const accuracy = stats.totalQuestions > 0 ? Math.round((stats.correctAnswers / stats.totalQuestions) * 100) : 0;
+            document.getElementById('stat-accuracy').innerText = `${accuracy}%`;
+        }
+
+        // Tenta buscar vozes em loop a cada 500ms nos primeiros segundos
+        let voiceLoadInterval = setInterval(() => {
+            const voices = window.speechSynthesis.getVoices();
+            if (voices && voices.length > 0) {
+                populateVoiceList();
+                clearInterval(voiceLoadInterval);
+            }
+        }, 500);
+
+        setTimeout(() => clearInterval(voiceLoadInterval), 6000);
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                populateVoiceList();
+            };
+        }
+    </script>
+</body>
+</html>

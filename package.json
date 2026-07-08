@@ -1,0 +1,99 @@
+{
+  "name": "devlingo",
+  "displayName": "DevLingo",
+  "description": "Aprenda inglês de forma imersiva enquanto desenvolve. Traduza, ouça a pronúncia e consulte expressões comuns do dia a dia de TI.",
+  "version": "1.0.0",
+  "publisher": "jean",
+  "icon": "media/logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeaneverton/devlingo.git"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devlingo-sidebar-container",
+          "title": "DevLingo",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "devlingo-sidebar-container": [
+        {
+          "type": "webview",
+          "id": "devlingo.sidebar",
+          "name": "DevLingo Learning Board",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "devlingo.translateReplace",
+        "title": "DevLingo: Traduzir e Substituir",
+        "category": "DevLingo"
+      },
+      {
+        "command": "devlingo.translateComment",
+        "title": "DevLingo: Traduzir e Adicionar Comentário",
+        "category": "DevLingo"
+      },
+      {
+        "command": "devlingo.speak",
+        "title": "DevLingo: Ouvir Pronúncia",
+        "category": "DevLingo"
+      },
+      {
+        "command": "devlingo.translateAnywhere",
+        "title": "DevLingo: Traduzir de Qualquer Lugar (Editor/Terminal/Área de Transferência)",
+        "category": "DevLingo"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "devlingo.translateReplace",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "devlingo.translateAnywhere",
+        "key": "ctrl+alt+y",
+        "mac": "cmd+alt+y"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "devlingo.translateReplace",
+          "group": "devlingo@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "devlingo.translateComment",
+          "group": "devlingo@2",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "devlingo.speak",
+          "group": "devlingo@3",
+          "when": "editorHasSelection"
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0"
+  }
+}
