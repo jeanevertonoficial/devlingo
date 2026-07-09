@@ -11,11 +11,11 @@ O **DevLingo** é uma extensão inteligente para o VS Code que atua como seu coa
 ## 🚀 Principais Recursos
 
 ### 1. Tradução Inteligente com Coach de IA (Gemini)
-* **Connected Speech**: Descubra como as palavras se conectam na pronúncia natural falada por nativos (ex: *"Translation test"* vira *"Translayshun_test"*).
-* **Dicas de TI**: Receba explicações gramaticais e de contexto técnico focadas na área de desenvolvimento, traduzidas em ambos os idiomas (Inglês e Português).
-* **Cache Inteligente**: Suas traduções anteriores são salvas localmente para carregar em 0ms (offline), economizando dados e requisições da API do Gemini.
+* **Pronúncia (IPA simples) 🗣️**: Descubra como pronunciar a tradução através de uma transcrição fonética simplificada e adaptada para falantes do português brasileiro (ex: *people* ➔ *pí-pəl*, *busy* ➔ *bí-zi*). Utiliza acentuação amigável para indicar a sílaba tônica de forma extremamente intuitiva.
+* **Dicas do Coach (Novas Expressões)**: O Coach sugere e ensina uma nova expressão em inglês relacionada à tradução para você expandir seu vocabulário. Cada dica inclui a frase em inglês com sua pronúncia IPA simplificada, e a respectiva tradução/contexto em português (ex: *"I'm doing well, how about you? (ái-m dú-in uél, háu a-báut iú?)"*).
+* **Cache Inteligente**: Suas traduções anteriores são salvas localmente para carregar em 0ms (offline), economizando dados e requisições da API.
 
-![Dicas do Coach e Connected Speech](media/hover.png)
+![Dicas do Coach e Pronúncia](media/hover.png)
 
 ---
 
@@ -31,9 +31,10 @@ Acompanhe seu progresso diretamente pela barra lateral:
 
 ---
 
-### 3. Tradutor, Expressões e Checklist de Vocabulário
+### 3. Tradutor, Expressões e Portfólio ("Baixar Apostila")
 * **Tradutor Dinâmico**: Tradução rápida bidirecional diretamente no painel.
 * **Expressões Úteis**: Guia prático de expressões comuns no dia a dia dev (Daily standups, Pull Requests, Code Reviews, Bugs, etc.).
+* **📥 Baixar Apostila**: Exporte todo o seu portfólio de estudos acumulado em um lindo arquivo Markdown (`.md`) estruturado contendo suas traduções, pronúncias IPA e dicas do coach diretamente no seu workspace para revisão offline.
 * **Checklist de Vocabulário**: Marque as frases do histórico como "aprendidas" e revise suas pronúncias a qualquer hora.
 
 <p align="center">
@@ -54,9 +55,14 @@ Traduza seleções em qualquer parte da IDE:
   4. Pressione **`Ctrl + Alt + Y`**!
   O balão de tradução aparecerá instantaneamente com opções de áudio e detalhamento no painel.
 
-### 5. Áudio com Velocidade Ajustável
-* Ouça pronúncias usando a **Voz Humana Online do Google (TTS)** ou as **Vozes Locais Offline** instaladas em seu sistema operacional.
-* Configure a velocidade de fala (ex: `0.8x`, `1.0x`) nas configurações do painel para treinar seu ouvido no seu próprio ritmo.
+### 5. Áudio Nativo Instantâneo com Zero Latência (Windows)
+* **Truque do Seek Dinâmico**: O motor de áudio nativo do Windows inicia o player e aguarda dinamicamente (em menos de 70ms) até a placa de som acordar do modo de suspensão, retrocedendo o áudio para o início imediatamente. Isso garante a reprodução de **toda a frase, sem cortes de palavras e sem atraso perceptível**.
+* Ouça pronúncias usando a **Voz Humana Online do Google (TTS)** ou as **Vozes Locais Offline** instaladas em seu sistema.
+
+### 6. Seleção de Modelos do Gemini & Economia de API
+* **Escolha do Modelo Ideal**: Alterne entre diferentes modelos da família Gemini, incluindo as últimas versões como `Gemini 3.5 Flash` (padrão recomendado), `Gemini 3.1 Flash-Lite`, `Gemini 2.5 Flash` e muito mais, diretamente no painel.
+* **Economia de API no Hover**: Ative ou desative o uso da API do Gemini para os balões de hover/inline nas configurações para economizar requisições e cotas da API gratuita.
+* **Avisos de API Inteligentes**: Alertas discretos e específicos integrados na interface em caso de limites de requisições excedidos (Erro 429) ou indisponibilidade temporária do servidor (Erro 503), sem popups intrusivos atrapalhando seu código.
 
 ---
 
@@ -66,7 +72,8 @@ Para habilitar a experiência completa com dicas do Coach de IA (Gemini):
 1. Acesse o painel do **DevLingo** na barra lateral.
 2. Clique no ícone de engrenagem (**⚙️**) para abrir as configurações.
 3. Insira sua **Chave de API do Gemini** (você pode gerar uma gratuitamente no [Google AI Studio](https://aistudio.google.com/)).
-4. Defina o motor de voz (Online ou Offline) e a velocidade ideal para os seus estudos.
+4. Selecione o **Modelo do Gemini** de sua preferência no menu de seleção (como `Gemini 3.5 Flash` para melhor estabilidade e cota, ou versões `Lite`).
+5. Defina o motor de voz (Online ou Offline) e a velocidade ideal para os seus estudos.
 
 ---
 

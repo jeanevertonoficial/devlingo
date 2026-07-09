@@ -1,4 +1,11 @@
 const vscode = require('vscode');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { exec } = require('child_process');
+
+// Referência global para o provedor do painel lateral
+let sidebarProviderRef = null;
 
 // Cache para evitar requisições duplicadas à API de tradução
 const translationCache = new Map();
@@ -21,7 +28,9 @@ let settings = {
     speechRate: '0.9',
     geminiApiKey: '',
     selectedEnVoiceName: '',
-    selectedPtVoiceName: ''
+    selectedPtVoiceName: '',
+    geminiInHover: false,
+    geminiModel: 'gemini-3.5-flash'
 };
 
 // Estatísticas padrão
@@ -50,26 +59,38 @@ function hasPortugueseWords(text) {
 /**
  * Traduz e analisa um texto usando o Gemini API (se configurado) ou Google Translate (grátis).
  * @param {string} text Texto a ser traduzido
+ * @param {boolean} forceGoogleTranslate Se true, força o uso do Google Translate em vez do Gemini
  * @returns {Promise<{ translated: string, from: string, to: string, connectedSpeech: string, explanationEn: string, explanationPt: string }>}
  */
-async function translateText(text) {
+async function translateText(text, forceGoogleTranslate = false) {
     if (!text || !text.trim()) {
         return { translated: '', from: '', to: '', connectedSpeech: '', explanationEn: '', explanationPt: '' };
     }
 
     const trimmed = text.trim();
     if (translationCache.has(trimmed)) {
-        return translationCache.get(trimmed);
+        const cached = translationCache.get(trimmed);
+        if (forceGoogleTranslate || cached.connectedSpeech || !settings.geminiApiKey || !settings.geminiApiKey.trim()) {
+            return cached;
+        }
     }
 
     let result = null;
+    let geminiError = null;
 
-    // Se houver chave API do Gemini configurada, usamos IA para formular e trazer conectado speech + explicações
-    if (settings.geminiApiKey && settings.geminiApiKey.trim()) {
+    // Se houver chave API do Gemini configurada e não estiver forçado o Google Translate, usamos IA
+    if (!forceGoogleTranslate && settings.geminiApiKey && settings.geminiApiKey.trim()) {
         try {
             result = await translateWithGemini(trimmed, settings.geminiApiKey.trim());
         } catch (err) {
-            console.error('Erro na tradução com Gemini, recorrendo ao Google Translate:', err);
+            console.error('[translateText] Erro na tradução com Gemini, recorrendo ao Google Translate:', err);
+            if (err.message && err.message.includes('429')) {
+                geminiError = 'Limite de requisições excedido (Erro 429).';
+            } else if (err.message && err.message.includes('503')) {
+                geminiError = 'Serviço temporariamente indisponível (Erro 503).';
+            } else {
+                geminiError = 'Erro na resposta do serviço.';
+            }
         }
     }
 
@@ -112,7 +133,8 @@ async function translateText(text) {
                 to: to,
                 connectedSpeech: '',
                 explanationEn: '',
-                explanationPt: ''
+                explanationPt: '',
+                geminiError: geminiError
             };
         } catch (error) {
             console.error('Erro na tradução DevLingo:', error);
@@ -146,7 +168,8 @@ async function translateText(text) {
  * Tradução avançada usando a API do Gemini
  */
 async function translateWithGemini(text, apiKey) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const model = settings.geminiModel || 'gemini-3.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     
     const prompt = `Você é um professor particular de inglês focado em programadores e profissionais de tecnologia.
 Analise o texto a seguir para realizar a tradução bidirecional (PT <-> EN). Se o texto for majoritariamente em português, formule para o inglês de forma correta e idiomática. Se for em inglês, traduza para o português.
@@ -155,9 +178,9 @@ Texto a ser analisado: "${text}"
 
 Instruções importantes para o JSON de retorno:
 1. "translated": Forneça a tradução correta e mais natural (especialmente adaptada ao contexto corporativo de TI se aplicável).
-2. "connectedSpeech": Adicione um guia de pronúncia com foco em "Connected Speech" (mostre conexões de palavras como 'look_at', reduções como 'wanna', 'gonna', linkings e uma aproximação de como falar de forma natural em um fluxo contínuo). Exemplo: "What do you" -> "whaddya".
-3. "explanationEn": Escreva uma explicação gramatical ou de vocabulário da tradução de 1 a 2 frases EM INGLÊS.
-4. "explanationPt": Forneça a tradução exata em PORTUGUÊS da explicação contida no campo "explanationEn".
+2. "connectedSpeech": Forneça a pronúncia em formato IPA simples e adaptada para falantes do português brasileiro (exemplo: "people" -> "pí-pəl", "busy" -> "bí-zi", "What time is it?" -> "Whaddáimez-it? (fala rápida)"). Mostre como pronunciar as palavras principais ou conexões de palavras de forma muito direta e sucinta, usando hifens e acentuação amigável em português para indicar a sílaba tônica.
+3. "explanationEn": Sugira uma frase ou expressão curta útil relacionada ao contexto ou muito comum no cotidiano profissional para o desenvolvedor aprender. Deve vir no formato: "Frase em inglês (Pronúncia IPA Simples da frase sugerida)". Exemplo: se o texto for um cumprimento, sugira algo como: "I'm doing well, how about you? (ái-m dú-in uél, háu a-báut iú?)".
+4. "explanationPt": Forneça a tradução correspondente da frase sugerida em "explanationEn" e o contexto de uso entre parênteses. Exemplo: "Estou indo bem, como vai você? (resposta comum em daily standups)".
 5. "from": Código do idioma de origem ("pt" ou "en").
 6. "to": Código do idioma de destino ("pt" ou "en").
 
@@ -278,7 +301,7 @@ function updateInlineDecoration(editor) {
                     return null;
                 }
                 try {
-                    const res = await translateText(cleaned);
+                    const res = await translateText(cleaned, !settings.geminiInHover);
                     return { lineNum: line.lineNum, translated: res.translated };
                 } catch (err) {
                     return null;
@@ -375,7 +398,8 @@ class DevLingoSidebarProvider {
                             to: result.to,
                             connectedSpeech: result.connectedSpeech || '',
                             explanationEn: result.explanationEn || '',
-                            explanationPt: result.explanationPt || ''
+                            explanationPt: result.explanationPt || '',
+                            geminiError: result['geminiError'] || null
                         });
                     } catch (err) {
                         vscode.window.showErrorMessage(err.message);
@@ -385,11 +409,13 @@ class DevLingoSidebarProvider {
                     settings = data.settings;
                     this._context.globalState.update('hoverEnabled', settings.hoverEnabled);
                     this._context.globalState.update('inlineEnabled', settings.inlineEnabled);
+                    this._context.globalState.update('geminiInHover', settings.geminiInHover);
                     this._context.globalState.update('voiceEngine', settings.voiceEngine);
                     this._context.globalState.update('speechRate', settings.speechRate);
                     this._context.globalState.update('geminiApiKey', settings.geminiApiKey);
                     this._context.globalState.update('selectedEnVoiceName', settings.selectedEnVoiceName);
                     this._context.globalState.update('selectedPtVoiceName', settings.selectedPtVoiceName);
+                    this._context.globalState.update('geminiModel', settings.geminiModel);
                     
                     // Se houver estatísticas atualizadas enviadas da webview, salva também
                     if (data.stats) {
@@ -409,6 +435,83 @@ class DevLingoSidebarProvider {
                 case 'showInfo':
                     vscode.window.showInformationMessage(data.message);
                     break;
+                case 'speakNative':
+                    if (settings.voiceEngine === 'online' && process.platform === 'win32') {
+                        playOnlineTTSWindows(data.text, data.lang);
+                    } else {
+                        try {
+                            const base64 = await getGoogleTTSBase64(data.text, data.lang);
+                            webviewView.webview.postMessage({ type: 'speakBase64', text: data.text, lang: data.lang, base64 });
+                        } catch (err) {
+                            console.error('[speakNative] Erro ao obter base64 do Google TTS:', err);
+                            webviewView.webview.postMessage({ type: 'speakOnlineFallback', text: data.text, lang: data.lang });
+                        }
+                    }
+                    break;
+                case 'exportPortfolio':
+                    try {
+                        const historyItems = data.history || [];
+                        if (historyItems.length === 0) {
+                            vscode.window.showInformationMessage('Nenhum item no histórico para exportar.');
+                            break;
+                        }
+
+                        let mdContent = `# 📚 Apostila de Aprendizado - DevLingo\n\n`;
+                        mdContent += `Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}\n\n`;
+                        mdContent += `Parabéns pelo seu progresso! Aqui está o seu portfólio de estudo acumulado com as traduções, pronúncias simplificadas (IPA) e dicas do coach.\n\n`;
+                        mdContent += `---\n\n`;
+
+                        historyItems.forEach((item, index) => {
+                            const isPt = item.from === 'pt';
+                            const ptText = isPt ? item.original : item.translated;
+                            const enText = isPt ? item.translated : item.original;
+
+                            mdContent += `## ${index + 1}. ${enText}\n`;
+                            mdContent += `- **Tradução:** ${ptText}\n`;
+                            
+                            if (item.connectedSpeech) {
+                                mdContent += `- **Pronúncia da Frase (IPA simples):** *${item.connectedSpeech}*\n`;
+                            }
+                            
+                            if (item.explanationEn || item.explanationPt) {
+                                mdContent += `### 💡 Expressão Extra para Praticar:\n`;
+                                if (item.explanationEn) {
+                                    mdContent += `  - **Inglês:** ${item.explanationEn}\n`;
+                                }
+                                if (item.explanationPt) {
+                                    mdContent += `  - **Tradução & Contexto:** ${item.explanationPt}\n`;
+                                }
+                            }
+                            mdContent += `\n- **Status:** ${item.learned ? '✅ Aprendido' : '⏳ Em aprendizado'}\n\n`;
+                            mdContent += `---\n\n`;
+                        });
+
+                        mdContent += `\n*Continue praticando diariamente para expandir seu vocabulário tech! 🚀*\n`;
+
+                        const defaultPath = path.join(vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || os.homedir(), 'Apostila_DevLingo.md');
+                        const options = {
+                            defaultUri: vscode.Uri.file(defaultPath),
+                            filters: {
+                                'Markdown Files': ['md']
+                            },
+                            title: 'Salvar Apostila DevLingo'
+                        };
+
+                        const fileUri = await vscode.window.showSaveDialog(options);
+                        if (fileUri) {
+                            fs.writeFileSync(fileUri.fsPath, mdContent, 'utf8');
+                            vscode.window.showInformationMessage('Apostila exportada com sucesso!', 'Abrir Arquivo').then(selection => {
+                                if (selection === 'Abrir Arquivo') {
+                                    vscode.workspace.openTextDocument(fileUri).then(doc => {
+                                        vscode.window.showTextDocument(doc);
+                                    });
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        vscode.window.showErrorMessage(`Falha ao exportar apostila: ${err.message}`);
+                    }
+                    break;
             }
         });
     }
@@ -417,6 +520,16 @@ class DevLingoSidebarProvider {
         if (this._view) {
             this._view.show(true);
             this._view.webview.postMessage({ type: 'speak', text, lang });
+        } else {
+            this._pendingSpeak = { text, lang };
+            vscode.commands.executeCommand('devlingo.sidebar.focus');
+        }
+    }
+
+    speakBase64(text, lang, base64) {
+        if (this._view) {
+            this._view.show(true);
+            this._view.webview.postMessage({ type: 'speakBase64', text, lang, base64 });
         } else {
             this._pendingSpeak = { text, lang };
             vscode.commands.executeCommand('devlingo.sidebar.focus');
@@ -463,11 +576,13 @@ function activate(context) {
     // Carrega as configurações
     settings.hoverEnabled = context.globalState.get('hoverEnabled', true);
     settings.inlineEnabled = context.globalState.get('inlineEnabled', false);
+    settings.geminiInHover = context.globalState.get('geminiInHover', false);
     settings.voiceEngine = context.globalState.get('voiceEngine', 'online');
     settings.speechRate = context.globalState.get('speechRate', '0.9');
     settings.geminiApiKey = context.globalState.get('geminiApiKey', '');
     settings.selectedEnVoiceName = context.globalState.get('selectedEnVoiceName', '');
     settings.selectedPtVoiceName = context.globalState.get('selectedPtVoiceName', '');
+    settings.geminiModel = context.globalState.get('geminiModel', 'gemini-3.5-flash');
 
     // Carrega estatísticas salvas
     stats = context.globalState.get('stats', {
@@ -479,6 +594,7 @@ function activate(context) {
     });
 
     const sidebarProvider = new DevLingoSidebarProvider(context);
+    sidebarProviderRef = sidebarProvider;
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             DevLingoSidebarProvider.viewType,
@@ -504,7 +620,7 @@ function activate(context) {
                 title: "Traduzindo...",
                 cancellable: false
             }, async () => {
-                const res = await translateText(text);
+                const res = await translateText(text, true);
                 await editor.edit(editBuilder => {
                     editBuilder.replace(selection, res.translated);
                 });
@@ -533,7 +649,7 @@ function activate(context) {
                 title: "Gerando Comentário Traduzido...",
                 cancellable: false
             }, async () => {
-                const res = await translateText(text);
+                const res = await translateText(text, true);
                 const commentStyle = getCommentPrefix(editor.document.languageId);
                 
                 const originalClean = cleanCommentText(text);
@@ -573,10 +689,24 @@ function activate(context) {
         const cleaned = cleanCommentText(text);
         
         try {
-            const res = await translateText(cleaned);
-            sidebarProvider.speak(cleaned, res.from);
+            const res = await translateText(cleaned, true);
+            if (settings.voiceEngine === 'online') {
+                if (process.platform === 'win32') {
+                    playOnlineTTSWindows(cleaned, res.from);
+                } else {
+                    const base64 = await getGoogleTTSBase64(cleaned, res.from);
+                    sidebarProviderRef.speakBase64(cleaned, res.from, base64);
+                }
+            } else {
+                sidebarProviderRef.speak(cleaned, res.from);
+            }
         } catch (err) {
-            sidebarProvider.speak(cleaned, 'en');
+            console.error('[speakCmd] Erro ao obter áudio do Google:', err);
+            if (settings.voiceEngine === 'online' && process.platform === 'win32') {
+                playOnlineTTSWindows(cleaned, 'en');
+            } else {
+                sidebarProviderRef.speak(cleaned, 'en');
+            }
         }
     });
 
@@ -609,7 +739,7 @@ function activate(context) {
                 title: "DevLingo: Traduzindo...",
                 cancellable: false
             }, async () => {
-                const res = await translateText(cleaned);
+                const res = await translateText(cleaned, true);
                 
                 const speakBtn = "🔊 Ouvir Pronúncia";
                 const showInSidebarBtn = "💬 Ver Detalhes no Painel";
@@ -676,7 +806,7 @@ function activate(context) {
             }
 
             try {
-                const res = await translateText(cleanedText);
+                const res = await translateText(cleanedText, !settings.geminiInHover);
                 
                 const sourceLang = res.from === 'pt' ? 'Português' : 'Inglês';
                 const targetLang = res.to === 'pt' ? 'Português' : 'Inglês';
@@ -693,21 +823,21 @@ function activate(context) {
 
                 if (res.explanationEn) {
                     hoverMarkdown.appendMarkdown(`**💡 Dica do Coach (EN):** ${res.explanationEn}\n`);
-                    const expEnEscaped = encodeURIComponent(JSON.stringify([res.explanationEn]));
-                    hoverMarkdown.appendMarkdown(`[🔊 Ouvir Dica (EN)](command:devlingo.speak?${expEnEscaped})\n\n`);
+                    const expEnUri = vscode.Uri.parse(`command:devlingo.speak?${encodeURIComponent(JSON.stringify([res.explanationEn]))}`);
+                    hoverMarkdown.appendMarkdown(`[🔊 Ouvir Dica (EN)](${expEnUri})\n\n`);
                 }
 
                 if (res.explanationPt) {
                     hoverMarkdown.appendMarkdown(`**💡 Dica do Coach (PT):** ${res.explanationPt}\n`);
-                    const expPtEscaped = encodeURIComponent(JSON.stringify([res.explanationPt]));
-                    hoverMarkdown.appendMarkdown(`[🔊 Ouvir Dica (PT)](command:devlingo.speak?${expPtEscaped})\n\n`);
+                    const expPtUri = vscode.Uri.parse(`command:devlingo.speak?${encodeURIComponent(JSON.stringify([res.explanationPt]))}`);
+                    hoverMarkdown.appendMarkdown(`[🔊 Ouvir Dica (PT)](${expPtUri})\n\n`);
                 }
                 
-                const originalEscaped = encodeURIComponent(JSON.stringify([cleanedText]));
-                const translatedEscaped = encodeURIComponent(JSON.stringify([res.translated]));
+                const originalUri = vscode.Uri.parse(`command:devlingo.speak?${encodeURIComponent(JSON.stringify([cleanedText]))}`);
+                const translatedUri = vscode.Uri.parse(`command:devlingo.speak?${encodeURIComponent(JSON.stringify([res.translated]))}`);
                 
-                hoverMarkdown.appendMarkdown(`[🔊 Ouvir Original (em ${sourceLang})](command:devlingo.speak?${originalEscaped}) &nbsp;|&nbsp; `);
-                hoverMarkdown.appendMarkdown(`[🔊 Ouvir Tradução (em ${targetLang})](command:devlingo.speak?${translatedEscaped})`);
+                hoverMarkdown.appendMarkdown(`[🔊 Ouvir Original (em ${sourceLang})](${originalUri}) &nbsp;|&nbsp; `);
+                hoverMarkdown.appendMarkdown(`[🔊 Ouvir Tradução (em ${targetLang})](${translatedUri})`);
 
                 return new vscode.Hover(hoverMarkdown);
             } catch (error) {
@@ -741,6 +871,121 @@ function activate(context) {
         activeEditorChange,
         selectionChange
     );
+}
+
+/**
+ * Obtém o áudio do Google TTS e retorna como uma string Base64.
+ * Isso permite contornar as restrições de CORS e Origin no Webview.
+ */
+async function getGoogleTTSBase64(text, langCode) {
+    const lang = langCode === 'pt' ? 'pt' : 'en';
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.substring(0, 200))}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Google TTS retornou status ${response.status}`);
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return buffer.toString('base64');
+}
+
+/**
+ * Reproduz o áudio do Google TTS nativamente no Windows utilizando o PowerShell e o MediaPlayer.
+ * Utiliza o switch -EncodedCommand para contornar políticas de segurança/execução de arquivo do Windows.
+ */
+async function playOnlineTTSWindows(text, langCode) {
+    try {
+        const lang = langCode === 'pt' ? 'pt' : 'en';
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.substring(0, 200))}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Google TTS retornou status ${response.status}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        const tempDir = os.tmpdir();
+        const mp3FilePath = path.join(tempDir, `devlingo_tts_${Date.now()}.mp3`);
+        fs.writeFileSync(mp3FilePath, buffer);
+        
+        const speed = parseFloat(settings.speechRate || '0.9');
+        const escapedMp3Path = mp3FilePath.replace(/'/g, "''");
+        
+        const psScript = [
+            `$ProgressPreference = 'SilentlyContinue'`,
+            `Add-Type -AssemblyName PresentationCore`,
+            `$player = New-Object System.Windows.Media.MediaPlayer`,
+            `$uri = New-Object System.Uri('${escapedMp3Path}')`,
+            `$player.Open($uri)`,
+            `$player.SpeedRatio = ${speed}`,
+            ``,
+            `# Espera até que a duração esteja disponível (timeout de 3s)`,
+            `$timeout = 30`,
+            `while (-not $player.NaturalDuration.HasTimeSpan -and $timeout -gt 0) {`,
+            `    Start-Sleep -m 100`,
+            `    $timeout--`,
+            `}`,
+            ``,
+            `# Se a duração estiver disponível, executa o truque do seek dinâmico para acordar a placa de som`,
+            `if ($player.NaturalDuration.HasTimeSpan) {`,
+            `    $duration = $player.NaturalDuration.TimeSpan.TotalMilliseconds`,
+            `    $player.Play()`,
+            `    `,
+            `    # Aguarda dinamicamente até a posição começar a avançar (indica que a placa de som acordou)`,
+            `    $wakeTimeout = 40`,
+            `    while ($player.Position.TotalMilliseconds -eq 0 -and $wakeTimeout -gt 0) {`,
+            `        Start-Sleep -m 50`,
+            `        $wakeTimeout--`,
+            `    }`,
+            `    `,
+            `    # Retrocede para o início da pronúncia imediatamente com a placa já ativa`,
+            `    $player.Position = New-Object System.TimeSpan(0)`,
+            `    # Aguarda o tempo de reprodução completo + margem de segurança de 300ms`,
+            `    $sleepTime = [int]($duration / ${speed}) + 300`,
+            `    Start-Sleep -m $sleepTime`,
+            `} else {`,
+            `    # Fallback simples caso a duração falhe`,
+            `    $player.Play()`,
+            `    Start-Sleep -s 5`,
+            `}`,
+            ``,
+            `$player.Close()`,
+            `Remove-Item '${escapedMp3Path}' -ErrorAction SilentlyContinue`
+        ].join('\r\n');
+        
+        const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
+        const playCommand = `powershell -WindowStyle Hidden -EncodedCommand ${b64}`;
+        
+        exec(playCommand, (error, stdout, stderr) => {
+            if (stdout) console.log('[playOnlineTTSWindows] PowerShell stdout:', stdout);
+            if (stderr) {
+                // Filtra o XML de progresso padrão de inicialização do PowerShell (CLIXML)
+                if (!stderr.includes('CLIXML')) {
+                    console.error('[playOnlineTTSWindows] PowerShell stderr:', stderr);
+                }
+            }
+            
+            if (error) {
+                console.error('[playOnlineTTSWindows] Erro ao reproduzir via PowerShell:', error);
+                // Limpeza preventiva em caso de falha de spawn
+                try { fs.unlinkSync(mp3FilePath); } catch (_) {}
+            }
+        });
+    } catch (err) {
+        console.error('[playOnlineTTSWindows] Falha no player online nativo, recorrendo à Webview:', err);
+        // Fallback para a Webview
+        if (sidebarProviderRef) {
+            // Em caso de erro nativo, enviamos como base64 para o webview (CORS-free)
+            try {
+                const base64 = await getGoogleTTSBase64(text, langCode);
+                sidebarProviderRef.speakBase64(text, langCode, base64);
+            } catch (_) {
+                sidebarProviderRef.speak(text, langCode);
+            }
+        }
+    }
 }
 
 function deactivate() {

@@ -372,7 +372,6 @@
 
         /* Histórico de Estudo */
         .history-list {
-            max-height: 400px;
             overflow-y: auto;
         }
 
@@ -504,6 +503,21 @@
             </div>
         </div>
 
+        <!-- Modelo do Gemini -->
+        <div class="input-group" id="gemini-model-group" style="margin-top: 10px;">
+            <label for="gemini-model">Modelo do Gemini</label>
+            <select id="gemini-model" onchange="saveSettings()">
+                <option value="gemini-3.5-flash">Gemini 3.5 Flash (Padrão)</option>
+                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                <option value="gemini-flash-latest">Gemini 1.5 Flash</option>
+                <option value="gemini-flash-lite-latest">Gemini 1.5 Flash-Lite</option>
+            </select>
+        </div>
+
         <!-- Motor de Voz -->
         <div class="input-group">
             <label for="voice-engine">Motor de Voz</label>
@@ -553,6 +567,11 @@
                 <input type="checkbox" id="chk-inline" onchange="saveSettings()">
                 <span>Balão inline na linha ativa</span>
             </label>
+            
+            <label class="checkbox-label" style="margin-top: 6px;">
+                <input type="checkbox" id="chk-gemini-hover" onchange="saveSettings()">
+                <span>Usar Gemini no balão/hover (Consome API)</span>
+            </label>
         </div>
     </div>
 
@@ -577,11 +596,18 @@
         <div id="result-container" style="display: none; margin-top: 16px;">
             <div class="card">
                 <div class="card-title" id="result-lang-label">Tradução</div>
+                
+                <!-- Alerta Erro Gemini API -->
+                <div id="gemini-limit-alert" style="display: none; background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.3); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11px; color: #ffb74d; line-height: 1.4; gap: 6px; align-items: flex-start;">
+                    <span>⚠️</span>
+                    <span id="gemini-limit-alert-text"><strong>Aviso do Gemini:</strong> Exibindo tradução simples sem IA. Pronúncia (IPA simples) e Dicas do Coach estão indisponíveis temporariamente.</span>
+                </div>
+                
                 <div class="card-body" id="translated-text" style="font-weight: 600; margin-bottom: 10px;"></div>
                 
                 <!-- Connected Speech (Gemini Only) -->
                 <div id="result-connected-speech-container" style="margin-top: 10px; display: none; margin-bottom: 10px;">
-                    <div class="card-title" style="color: #81d4fa;">Connected Speech 🗣️</div>
+                    <div class="card-title" style="color: #81d4fa;">Pronúncia (IPA simples) 🗣️</div>
                     <div class="card-body" id="result-connected-speech" style="font-style: italic; color: #b3e5fc;"></div>
                 </div>
 
@@ -598,7 +624,7 @@
                     
                     <div>
                         <div style="font-size: 11.5px; color: #aaaaaa; line-height: 1.4; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.04); padding-top: 6px;">
-                            <span id="result-explanation-pt"></span>
+                            <span><strong>Tradução:</strong> <span id="result-explanation-pt"></span></span>
                             <button class="action-icon" style="padding: 2px; font-size: 11px;" title="Ouvir Dica em Português" onclick="speakExplanationPt()">🔊</button>
                         </div>
                     </div>
@@ -679,6 +705,12 @@
 
     <!-- Conteúdo da Aba 3: Vocabulário (Histórico) -->
     <div id="history-tab" class="tab-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 4px;">
+            <span style="font-size: 12px; color: var(--vscode-sideBar-foreground); opacity: 0.8; font-weight: bold;">Portfólio de Aprendizado</span>
+            <button class="btn-translate" style="margin: 0; padding: 6px 12px; font-size: 11px; width: auto;" onclick="exportPortfolio()" title="Baixar histórico como apostila em Markdown">
+                📥 Baixar Apostila
+            </button>
+        </div>
         <div class="history-list" id="history-list-container">
             <div class="empty-state">Seu histórico de tradução aparecerá aqui...</div>
         </div>
@@ -764,7 +796,8 @@
             speechRate: '0.9',
             geminiApiKey: '',
             selectedEnVoiceName: '',
-            selectedPtVoiceName: ''
+            selectedPtVoiceName: '',
+            geminiModel: 'gemini-3.5-flash'
         };
 
         // Quiz State
@@ -811,6 +844,12 @@
             populateVoiceList();
         };
 
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                populateVoiceList();
+            };
+        }
+
         // Alterna entre abas
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -855,7 +894,17 @@
                     addToHistory(message);
                     break;
                 case 'speak':
-                    speakText(message.text, message.lang);
+                    if (settings.voiceEngine === 'online') {
+                        speakOnlineFallback(message.text, message.lang);
+                    } else {
+                        speakLocalText(message.text, message.lang, parseFloat(settings.speechRate || '0.9'));
+                    }
+                    break;
+                case 'speakOnlineFallback':
+                    speakOnlineFallback(message.text, message.lang);
+                    break;
+                case 'speakBase64':
+                    playBase64Audio(message.base64);
                     break;
                 case 'populateAndTranslate':
                     document.getElementById('source-text').value = message.text;
@@ -867,9 +916,11 @@
                     settings = message.settings;
                     document.getElementById('chk-hover').checked = settings.hoverEnabled;
                     document.getElementById('chk-inline').checked = settings.inlineEnabled;
+                    document.getElementById('chk-gemini-hover').checked = settings.geminiInHover || false;
                     document.getElementById('voice-engine').value = settings.voiceEngine || 'online';
                     document.getElementById('speech-rate').value = settings.speechRate || '0.9';
                     document.getElementById('gemini-key').value = settings.geminiApiKey || '';
+                    document.getElementById('gemini-model').value = settings.geminiModel || 'gemini-3.5-flash';
                     
                     // Restaura as vozes selecionadas a partir do settings
                     selectedEnVoiceName = settings.selectedEnVoiceName || '';
@@ -897,11 +948,24 @@
             const explanationContainer = document.getElementById('result-explanation-container');
             const explanationEnOutput = document.getElementById('result-explanation-en');
             const explanationPtOutput = document.getElementById('result-explanation-pt');
+            const geminiAlert = document.getElementById('gemini-limit-alert');
 
             const fromLang = res.from === 'pt' ? 'Português' : 'Inglês';
             const toLang = res.to === 'pt' ? 'Português' : 'Inglês';
             label.innerText = `Tradução (${fromLang} ➔ ${toLang})`;
             output.innerText = res.translated;
+
+            if (geminiAlert) {
+                if (res.geminiError) {
+                    const alertText = document.getElementById('gemini-limit-alert-text');
+                    if (alertText) {
+                        alertText.innerHTML = `<strong>Aviso do Gemini:</strong> ${res.geminiError} Exibindo tradução simples sem IA. Pronúncia (IPA simples) e Dicas do Coach estão indisponíveis temporariamente.`;
+                    }
+                    geminiAlert.style.display = 'flex';
+                } else {
+                    geminiAlert.style.display = 'none';
+                }
+            }
 
             // Renderiza o connected speech se disponível
             if (res.connectedSpeech) {
@@ -939,13 +1003,15 @@
         // Fala a explicação do coach em inglês
         function speakExplanationEn() {
             if (!lastResult || !lastResult.explanationEn) return;
-            speakText(lastResult.explanationEn, 'en');
+            const cleaned = lastResult.explanationEn.replace(/\(.*?\)/g, '').trim();
+            speakText(cleaned, 'en');
         }
 
         // Fala a explicação do coach em português
         function speakExplanationPt() {
             if (!lastResult || !lastResult.explanationPt) return;
-            speakText(lastResult.explanationPt, 'pt');
+            const cleaned = lastResult.explanationPt.replace(/\(.*?\)/g, '').trim();
+            speakText(cleaned, 'pt');
         }
 
         // Fala expressões estáticas do guia
@@ -959,22 +1025,10 @@
 
             // Caso 1: Voz Humana Online (Google TTS)
             if (settings.voiceEngine === 'online') {
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                }
-                
-                if (activeAudio) {
-                    activeAudio.pause();
-                }
-
-                const lang = langCode === 'pt' ? 'pt' : 'en';
-                const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.substring(0, 200))}`;
-                
-                activeAudio = new Audio(url);
-                activeAudio.playbackRate = speed;
-                activeAudio.play().catch(err => {
-                    console.error("Erro no player online, executando fallback local:", err);
-                    speakLocalText(text, langCode, speed);
+                vscode.postMessage({
+                    type: 'speakNative',
+                    text: text,
+                    lang: langCode
                 });
             } else {
                 // Caso 2: Voz Local Offline (Web Speech API)
@@ -982,9 +1036,59 @@
             }
         }
 
+        // Toca o áudio online usando o player do navegador (fallback para não-Windows)
+        function speakOnlineFallback(text, langCode) {
+            const speed = parseFloat(settings.speechRate || '0.9');
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            
+            if (activeAudio) {
+                activeAudio.pause();
+            }
+
+            const lang = langCode === 'pt' ? 'pt' : 'en';
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text.substring(0, 200))}`;
+            
+            activeAudio = new Audio(url);
+            activeAudio.playbackRate = speed;
+            activeAudio.play()
+                .then(() => {})
+                .catch(err => {
+                    console.error("[speakOnlineFallback] Erro no player online, executando fallback local:", err);
+                    speakLocalText(text, langCode, speed);
+                });
+        }
+
+        // Toca áudio a partir de uma string base64 (Google TTS sem CORS/bloqueios)
+        function playBase64Audio(base64) {
+            const speed = parseFloat(settings.speechRate || '0.9');
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            
+            if (activeAudio) {
+                activeAudio.pause();
+            }
+
+            try {
+                activeAudio = new Audio("data:audio/mp3;base64," + base64);
+                activeAudio.playbackRate = speed;
+                activeAudio.play()
+                    .then(() => {})
+                    .catch(err => {
+                        console.error("[playBase64Audio] Erro ao reproduzir base64, caindo para voz local:", err);
+                        vscode.postMessage({ type: 'showError', message: 'Erro de reprodução: por favor, interaja com a barra lateral clicando nela primeiro.' });
+                    });
+            } catch (e) {
+                console.error("[playBase64Audio] Falha ao instanciar Audio:", e);
+            }
+        }
+
         // Executa a leitura offline usando as vozes locais do SO
         function speakLocalText(text, langCode, speed) {
             if (!('speechSynthesis' in window)) {
+                console.error('[speakLocalText] speechSynthesis not supported in window');
                 vscode.postMessage({ type: 'showError', message: 'Navegador não suporta síntese de voz.' });
                 return;
             }
@@ -1027,7 +1131,10 @@
                         play();
                     }
                 }, 100);
-                setTimeout(() => clearInterval(interval), 3000); // timeout de segurança
+                setTimeout(() => {
+                    clearInterval(interval);
+                    play();
+                }, 3000); // timeout de segurança
             } else {
                 play();
             }
@@ -1070,8 +1177,8 @@
             const enSelect = document.getElementById('voice-en');
             const ptSelect = document.getElementById('voice-pt');
             
-            const currentEnVal = enSelect.value || selectedEnVoiceName;
-            const currentPtVal = ptSelect.value || selectedPtVoiceName;
+            const currentEnVal = selectedEnVoiceName || enSelect.value;
+            const currentPtVal = selectedPtVoiceName || ptSelect.value;
             
             enSelect.innerHTML = '';
             ptSelect.innerHTML = '';
@@ -1134,18 +1241,25 @@
 
         // Salva as configurações completas
         function saveSettings() {
-            if (!isInitialized) return;
+            if (!isInitialized) {
+                return;
+            }
             
-            selectedEnVoiceName = document.getElementById('voice-en').value;
-            selectedPtVoiceName = document.getElementById('voice-pt').value;
+            const currentEngine = document.getElementById('voice-engine').value;
+            if (currentEngine === 'local') {
+                selectedEnVoiceName = document.getElementById('voice-en').value;
+                selectedPtVoiceName = document.getElementById('voice-pt').value;
+            }
             
             settings.hoverEnabled = document.getElementById('chk-hover').checked;
             settings.inlineEnabled = document.getElementById('chk-inline').checked;
-            settings.voiceEngine = document.getElementById('voice-engine').value;
+            settings.geminiInHover = document.getElementById('chk-gemini-hover').checked;
+            settings.voiceEngine = currentEngine;
             settings.speechRate = document.getElementById('speech-rate').value;
             settings.geminiApiKey = document.getElementById('gemini-key').value;
             settings.selectedEnVoiceName = selectedEnVoiceName;
             settings.selectedPtVoiceName = selectedPtVoiceName;
+            settings.geminiModel = document.getElementById('gemini-model').value;
 
             const state = vscode.getState() || {};
             state.history = translationHistory;
@@ -1224,11 +1338,25 @@
             const item = translationHistory.find(h => h.id === id);
             if (item) {
                 if (lang === 'en') {
-                    speakText(item.explanationEn, 'en');
+                    const cleaned = item.explanationEn.replace(/\(.*?\)/g, '').trim();
+                    speakText(cleaned, 'en');
                 } else {
-                    speakText(item.explanationPt, 'pt');
+                    const cleaned = item.explanationPt.replace(/\(.*?\)/g, '').trim();
+                    speakText(cleaned, 'pt');
                 }
             }
+        }
+
+        // Exporta o histórico e as dicas do coach como apostila Markdown (.md)
+        function exportPortfolio() {
+            if (translationHistory.length === 0) {
+                vscode.postMessage({ type: 'showInfo', message: 'Traduza algumas expressões primeiro para acumular itens no seu portfólio.' });
+                return;
+            }
+            vscode.postMessage({
+                type: 'exportPortfolio',
+                history: translationHistory
+            });
         }
 
         function renderHistory() {
@@ -1247,18 +1375,18 @@
                 const hasExplanation = item.explanationEn || item.explanationPt;
                 const detailHtml = (item.connectedSpeech || hasExplanation) ? `
                     <div id="history-detail-${item.id}" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 11.5px; line-height: 1.4;">
-                        ${item.connectedSpeech ? `<div style="font-style: italic; color: #b3e5fc; margin-bottom: 6px;">🗣️ Connected Speech: ${item.connectedSpeech}</div>` : ''}
+                        ${item.connectedSpeech ? `<div style="font-style: italic; color: #b3e5fc; margin-bottom: 6px;">🗣️ Pronúncia (IPA simples): ${item.connectedSpeech}</div>` : ''}
                         
                         ${item.explanationEn ? `
                             <div style="color: #e0e0e0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px;">
-                                <span>💡 EN: ${item.explanationEn}</span>
+                                <span>💡 Dica: ${item.explanationEn}</span>
                                 <button class="action-icon" style="padding: 2px; font-size: 10px;" title="Ouvir dica em Inglês" onclick="event.stopPropagation(); speakHistoryExplanation(${item.id}, 'en')">🔊</button>
                             </div>
                         ` : ''}
                         
                         ${item.explanationPt ? `
                             <div style="color: #aaaaaa; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.04); padding-top: 4px;">
-                                <span>💡 PT: ${item.explanationPt}</span>
+                                <span><strong>Tradução:</strong> ${item.explanationPt}</span>
                                 <button class="action-icon" style="padding: 2px; font-size: 10px;" title="Ouvir dica em Português" onclick="event.stopPropagation(); speakHistoryExplanation(${item.id}, 'pt')">🔊</button>
                             </div>
                         ` : ''}
