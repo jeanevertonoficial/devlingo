@@ -6,6 +6,10 @@
 
 O **DevLingo** é uma extensão inteligente para o VS Code que atua como seu coach de inglês pessoal durante o expediente. Ele ajuda desenvolvedores a traduzirem códigos, documentações e mensagens, ensina pronúncias do dia a dia da área de TI e acompanha a sua evolução diária por meio de gamificação e testes interativos.
 
+<p align="center">
+  <img src="media/apresentacao-da-devlingo.gif" alt="Apresentação da DevLingo" />
+</p>
+
 ---
 
 ## 🚀 Principais Recursos
