@@ -1,9 +1,9 @@
 {
-  "name": "devlingo",
-  "displayName": "DevLingo",
+  "name": "devlingo-ia",
+  "displayName": "DevLingo AI",
   "description": "Aprenda inglês de forma imersiva enquanto desenvolve. Traduza, ouça a pronúncia e consulte expressões comuns do dia a dia de TI.",
-  "version": "1.1.2",
-  "publisher": "jeanevertonoficial",
+  "version": "1.1.3",
+  "publisher": "DevLingo",
   "icon": "media/logo.png",
   "license": "MIT",
   "repository": {
@@ -71,7 +71,16 @@
       {
         "command": "devlingo.translateAnywhere",
         "key": "ctrl+alt+y",
-        "mac": "cmd+alt+y"
+        "mac": "cmd+alt+y",
+        "when": "editorTextFocus",
+        "args": { "source": "editor" }
+      },
+      {
+        "command": "devlingo.translateAnywhere",
+        "key": "ctrl+alt+y",
+        "mac": "cmd+alt+y",
+        "when": "!editorTextFocus",
+        "args": { "source": "clipboard" }
       }
     ],
     "menus": {

@@ -57,6 +57,28 @@ function hasPortugueseWords(text) {
 }
 
 /**
+ * Realiza uma requisição fetch com timeout para evitar travamentos.
+ * @param {string} url URL para requisição
+ * @param {RequestInit} options Opções adicionais do fetch
+ * @param {number} timeout Tempo limite em milissegundos
+ */
+async function fetchWithTimeout(url, options = {}, timeout = 6000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (err) {
+        clearTimeout(id);
+        throw err;
+    }
+}
+
+/**
  * Traduz e analisa um texto usando o Gemini API (se configurado) ou Google Translate (grátis).
  * @param {string} text Texto a ser traduzido
  * @param {boolean} forceGoogleTranslate Se true, força o uso do Google Translate em vez do Gemini
@@ -100,7 +122,7 @@ async function translateText(text, forceGoogleTranslate = false) {
             const isPtHeuristic = hasPortugueseWords(trimmed);
 
             const urlEn = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(trimmed)}`;
-            const resEn = await fetch(urlEn);
+            const resEn = await fetchWithTimeout(urlEn);
             const dataEn = await resEn.json();
 
             let detectedLang = dataEn[2];
@@ -115,7 +137,7 @@ async function translateText(text, forceGoogleTranslate = false) {
 
             if (from === 'en') {
                 const urlPt = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=pt&dt=t&q=${encodeURIComponent(trimmed)}`;
-                const resPt = await fetch(urlPt);
+                const resPt = await fetchWithTimeout(urlPt);
                 const dataPt = await resPt.json();
                 translatedText = dataPt[0].map(s => s[0]).join('');
                 from = 'en';
@@ -186,7 +208,7 @@ Instruções importantes para o JSON de retorno:
 
 Retorne a resposta estritamente no formato de objeto JSON com as chaves: "translated", "connectedSpeech", "explanationEn", "explanationPt", "from", "to". Não coloque blocos de marcação de código do tipo \`\`\`json no retorno, apenas a string JSON limpa.`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -386,6 +408,9 @@ class DevLingoSidebarProvider {
                         this.populateAndTranslate(this._pendingPopulate);
                         this._pendingPopulate = null;
                     }
+                    break;
+                case 'triggerTranslateAnywhere':
+                    vscode.commands.executeCommand('devlingo.translateAnywhere', { source: 'clipboard', text: data.text });
                     break;
                 case 'translate':
                     try {
@@ -710,17 +735,28 @@ function activate(context) {
     });
 
     // Traduzir de Qualquer Lugar (Editor, Terminal, Chats, Clipboard)
-    const translateAnywhereCmd = vscode.commands.registerCommand('devlingo.translateAnywhere', async () => {
+    const translateAnywhereCmd = vscode.commands.registerCommand('devlingo.translateAnywhere', async (args) => {
         let text = '';
+        const source = args && args.source;
 
-        // 1. Tenta pegar a seleção do editor ativo
-        const editor = vscode.window.activeTextEditor;
-        if (editor && !editor.selection.isEmpty) {
-            text = editor.document.getText(editor.selection);
+        // 1. Tenta pegar a seleção do editor ativo (somente se não vier de forma explícita do clipboard)
+        if (source !== 'clipboard') {
+            const editor = vscode.window.activeTextEditor;
+            if (editor && !editor.selection.isEmpty) {
+                text = editor.document.getText(editor.selection);
+            }
         }
 
-        // 2. Se não houver seleção no editor, lê diretamente o clipboard do sistema (para terminal, chats, etc.)
+        // 2. Se não houver seleção no editor, tenta ler do clipboard
         if (!text || !text.trim()) {
+            try {
+                // Tenta forçar a cópia de seleção ativa do terminal ou de inputs baseados em Monaco para o clipboard
+                await vscode.commands.executeCommand('workbench.action.terminal.copySelection');
+                await vscode.commands.executeCommand('editor.action.clipboardCopyAction');
+                await new Promise(resolve => setTimeout(resolve, 80));
+            } catch (e) {
+                // Ignora se os comandos não estiverem disponíveis ou não aplicáveis
+            }
             text = await vscode.env.clipboard.readText();
         }
 
@@ -733,13 +769,20 @@ function activate(context) {
         if (cleaned.length < 2) return;
 
         try {
+            /** @type {any} */
+            let res = null;
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
                 title: "DevLingo: Traduzindo...",
                 cancellable: false
             }, async () => {
-                const res = await translateText(cleaned, true);
-                
+                res = await translateText(cleaned, true);
+            });
+
+            // Pequena pausa para garantir que o VS Code dispense a notificação de progresso na UI
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            if (res) {
                 const speakBtn = "🔊 Ouvir Pronúncia";
                 const showInSidebarBtn = "💬 Ver Detalhes no Painel";
 
@@ -754,7 +797,7 @@ function activate(context) {
                 } else if (selectionResult === showInSidebarBtn) {
                     sidebarProvider.populateAndTranslate(cleaned);
                 }
-            });
+            }
         } catch (err) {
             vscode.window.showErrorMessage(err.message);
         }

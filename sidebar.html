@@ -844,6 +844,24 @@
             populateVoiceList();
         };
 
+        // Atalho global no webview (Ctrl+Alt+Y / Cmd+Alt+Y)
+        window.addEventListener('keydown', event => {
+            const isY = event.key === 'y' || event.key === 'Y';
+            const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+            const isAlt = event.altKey;
+
+            if (isY && isCtrlOrCmd && isAlt) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const selection = window.getSelection().toString().trim();
+                vscode.postMessage({
+                    type: 'triggerTranslateAnywhere',
+                    text: selection
+                });
+            }
+        });
+
         if ('speechSynthesis' in window) {
             window.speechSynthesis.onvoiceschanged = () => {
                 populateVoiceList();
