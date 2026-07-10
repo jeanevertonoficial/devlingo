@@ -624,7 +624,6 @@ function activate(context) {
                 await editor.edit(editBuilder => {
                     editBuilder.replace(selection, res.translated);
                 });
-                vscode.window.showInformationMessage(`Traduzido de ${res.from.toUpperCase()} para ${res.to.toUpperCase()}!`);
             });
         } catch (err) {
             vscode.window.showErrorMessage(err.message);
